@@ -49,20 +49,15 @@
           .toLowerCase();
         console.log("🗣️ Texto detectado:", transcript);
 
-        if (transcript.includes("alexa")) {
-          const comando = transcript
-            .split("alexa,")[1]
-            ?.trim()
-            .replace(/\.$/, ""); // 🔧 elimina el punto final
+        // Detectar "alexa" con tolerancia
+        const match = transcript.match(/alexa[,:\s]*([\w\s]+)/);
+        const comando = match?.[1]?.trim().replace(/\.$/, "");
 
-          console.log("📤 Comando:", comando);
-
-          if (comando && socket.readyState === WebSocket.OPEN) {
-            socket.send(comando);
-            console.log("📤 Comando enviado:", comando);
-          }
+        if (comando && socket.readyState === WebSocket.OPEN) {
+          socket.send(comando);
+          console.log("📤 Comando enviado:", comando);
         } else {
-          console.log("🔇 Ignorado (no se dijo 'alexa')");
+          console.log("🔇 Ignorado (no se dijo 'alexa' correctamente)");
         }
       };
 
