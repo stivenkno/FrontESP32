@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Control de dispositivos a distancia</title>
+  </head>
+  <body>
+    <script>
+      // 🔌 Conexión WebSocket
+      const socket = new WebSocket(
+        "wss://servidor-ws-conexionesp32.onrender.com"
+      );
+      // const socket = new WebSocket("ws://localhost:3000/ws"); // para pruebas locales
+
+      socket.onopen = () => {
+        console.log("✅ Conectado al servidor WebSocket");
+        socket.send(
+          JSON.stringify({ type: "hello", msg: "Hola desde el navegador" })
+        );
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("📩 Mensaje del servidor:", data);
+        } catch (err) {
+          console.error("❌ Error al parsear mensaje:", event.data);
+        }
+      };
+
+      socket.onclose = () => {
+        console.log("🔌 Conexión cerrada");
+      };
+
+      socket.onerror = (error) => {
+        console.error("⚠️ Error en la conexión WebSocket:", error);
+      };
+
+      // 🗣️ Reconocimiento de voz
+      const recognition = new webkitSpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = "es-ES";
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript
+          .trim()
+          .toLowerCase();
+        console.log("🗣️ Texto detectado:", transcript);
+
+        if (transcript.includes("alexa")) {
+          const comando = transcript
+            .split("alexa,")[1]
+            ?.trim()
+            .replace(/\.$/, ""); // 🔧 elimina el punto final
+
+          console.log("📤 Comando:", comando);
+
+          if (comando && socket.readyState === WebSocket.OPEN) {
+            socket.send(comando);
+            console.log("📤 Comando enviado:", comando);
+          }
+        } else {
+          console.log("🔇 Ignorado (no se dijo 'alexa')");
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error("🎤 Error de reconocimiento:", event.error);
+        if (event.error !== "aborted") {
+          recognition.start();
+        }
+      };
+
+      recognition.onend = () => {
+        console.log("🔁 Reconocimiento detenido. Reiniciando...");
+        recognition.start();
+      };
+
+      recognition.start();
+
+      // 👁️ Reiniciar reconocimiento al volver a la pestaña
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+          console.log("👁️ Pestaña activa, reiniciando reconocimiento...");
+          recognition.start();
+        }
+      });
+    </script>
+  </body>
+</html>
