@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,7 +11,6 @@
       const socket = new WebSocket(
         "wss://servidor-ws-conexionesp32.onrender.com"
       );
-      // const socket = new WebSocket("ws://localhost:3000/ws"); // para pruebas locales
 
       socket.onopen = () => {
         console.log("✅ Conectado al servidor WebSocket");
@@ -40,22 +39,31 @@
       // 🗣️ Reconocimiento de voz
       const recognition = new webkitSpeechRecognition();
       recognition.continuous = true;
-      recognition.interimResults = false;
+      recognition.interimResults = true; // Activamos resultados intermedios
       recognition.lang = "es-ES";
 
       recognition.onresult = (event) => {
-        const transcript = event.results[event.results.length - 1][0].transcript
-          .trim()
-          .toLowerCase();
-        console.log("🗣️ Texto detectado:", transcript);
+        const result = event.results[event.results.length - 1];
 
-        // Detectar "alexa" con tolerancia
-        const match = transcript.match(/alexa[,:\s]*([\w\s]+)/);
-        const comando = match?.[1]?.trim().replace(/\.$/, "");
+        if (!result.isFinal) return; // Ignorar resultados intermedios
 
-        if (comando && socket.readyState === WebSocket.OPEN) {
-          socket.send(comando);
-          console.log("📤 Comando enviado:", comando);
+        const transcript = result[0].transcript.trim().toLowerCase();
+        console.log("🗣️ Texto final detectado:", transcript);
+
+        // Regex para capturar comando luego de "alexa"
+        const match = transcript.match(/alexa[,:\s]*(.+)/);
+        let comando = match?.[1]?.trim().replace(/\.$/, "");
+
+        if (comando) {
+          // Eliminar todas las comas
+          comando = comando.replace(/,/g, "");
+
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(comando);
+            console.log("📤 Comando enviado:", comando);
+          } else {
+            console.log("🔇 Conexión WebSocket no está abierta");
+          }
         } else {
           console.log("🔇 Ignorado (no se dijo 'alexa' correctamente)");
         }
